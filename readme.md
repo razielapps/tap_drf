@@ -137,7 +137,7 @@ docker compose up -d
 
 **Conscience Ekhomwandolor (AVT Conscience)**  
 - Passionate  fullstack developer & cyber security researcher (red team enthusiast) 
-- Creator of tap_drf -a DRF Bootstrap Script for production-ready API development  
+- Creator of tap_drf, tap_react, tap_fullstack  
 - Personal Blog: [https://medium.com/@avtconscience](https://medium.com/@avtconscience)  
 - GitHub: [https://github.com/razielapps](https://github.com/razielapps)  
 - Email: [avtxconscience@gmail.com](mailto:avtxconscience@gmail.com)
