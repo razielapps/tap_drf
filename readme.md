@@ -135,7 +135,7 @@ docker compose up -d
 ```
 ## Author
 
-**Conscience Ekhomwandolor (AVT Conscience**  
+**Conscience Ekhomwandolor (AVT Conscience)**  
 - Passionate  fullstack developer & cyber security researcher (red team enthusiast) 
 - Creator of tap_drf -a DRF Bootstrap Script for production-ready API development  
 - Personal Blog: [https://medium.com/@avtconscience](https://medium.com/@avtconscience)  
