@@ -7,7 +7,7 @@ from pathlib import Path
 import secrets
 import string
 import shutil
-
+from datetime import datetime
 # ------------------------
 # Config
 # ------------------------
@@ -24,6 +24,7 @@ PROJECT_REQUIREMENTS = [
 ]
 
 API_APP = "api"
+year = datetime.now().year
 
 # ------------------------
 # Helpers
@@ -35,18 +36,22 @@ def run(cmd, cwd=None):
         print(f"❌ Command failed: {cmd}")
         sys.exit(1)
 
+
 def generate_secret_key():
     chars = string.ascii_letters + string.digits + "!@#$%^&*(-_=+)"
     return "".join(secrets.choice(chars) for _ in range(50))
 
+
 def write_file(path, content):
     path.write_text(content.strip() + "\n")
+
 
 def get_system_python():
     python = shutil.which("python3") or shutil.which("python")
     if not python:
         raise RuntimeError("Python not found! Install python3 or add python to PATH.")
     return python
+
 
 def get_venv_python(base):
     """Detect correct venv python executable"""
@@ -59,6 +64,7 @@ def get_venv_python(base):
     if not venv_python.exists():
         raise RuntimeError(f"Python executable not found in venv: {venv_python}")
     return venv_python
+
 
 # ------------------------
 # Main Bootstrap
@@ -92,18 +98,22 @@ def main():
     run(f"{VENV_PYTHON} manage.py startapp {API_APP}")
 
     # Step 5: Write .env
-    write_file(base / ".env", f"""
+    write_file(
+        base / ".env",
+        f"""
 SECRET_KEY={secret}
 DEBUG=True
 
 ALLOWED_HOSTS=*
-""")
+""",
+    )
 
     # Step 6: requirements.txt
     write_file(base / "requirements.txt", "\n".join(PROJECT_REQUIREMENTS))
 
     # Step 7: settings.py (safe concatenation to avoid syntax errors)
-    settings_content = f"""
+    settings_content = (
+        f"""
 from pathlib import Path
 import os
 from dotenv import load_dotenv
@@ -169,18 +179,20 @@ DATABASES = {{
         "NAME": BASE_DIR / "db.sqlite3",
     }}
 }}
-""" + "\n" + \
-"# Uncomment below for PostgreSQL configuration\n" + \
-"# DATABASES = {\n" + \
-"#     'default': {\n" + \
-"#         'ENGINE': 'django.db.backends.postgresql',\n" + \
-"#         'NAME': os.getenv('DB_NAME'),\n" + \
-"#         'USER': os.getenv('DB_USER'),\n" + \
-"#         'PASSWORD': os.getenv('DB_PASSWORD'),\n" + \
-"#         'HOST': os.getenv('DB_HOST'),\n" + \
-"#         'PORT': os.getenv('DB_PORT'),\n" + \
-"#     }\n" + \
-"# }\n" + f"""
+"""
+        + "\n"
+        + "# Uncomment below for PostgreSQL configuration\n"
+        + "# DATABASES = {\n"
+        + "#     'default': {\n"
+        + "#         'ENGINE': 'django.db.backends.postgresql',\n"
+        + "#         'NAME': os.getenv('DB_NAME'),\n"
+        + "#         'USER': os.getenv('DB_USER'),\n"
+        + "#         'PASSWORD': os.getenv('DB_PASSWORD'),\n"
+        + "#         'HOST': os.getenv('DB_HOST'),\n"
+        + "#         'PORT': os.getenv('DB_PORT'),\n"
+        + "#     }\n"
+        + "# }\n"
+        + f"""
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
@@ -201,11 +213,14 @@ SIMPLE_JWT = {{
     "AUTH_HEADER_TYPES": ("Bearer",),
 }}
 """
+    )
 
     write_file(base / project / "settings.py", settings_content)
 
     # Step 8: urls.py
-    write_file(base / project / "urls.py", f"""
+    write_file(
+        base / project / "urls.py",
+        f"""
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
@@ -232,19 +247,25 @@ urlpatterns = [
     path("swagger/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
     path("redoc/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
 ]
-""")
+""",
+    )
 
     # Step 9: API app urls/views
-    write_file(base / API_APP / "urls.py", """
+    write_file(
+        base / API_APP / "urls.py",
+        """
 from django.urls import path
 from .views import HealthView
 
 urlpatterns = [
     path("v1/health/", HealthView.as_view()),
 ]
-""")
+""",
+    )
 
-    write_file(base / API_APP / "views.py", """
+    write_file(
+        base / API_APP / "views.py",
+        """
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
@@ -254,10 +275,13 @@ class HealthView(APIView):
 
     def get(self, request):
         return Response({"status": "ok"})
-""")
+""",
+    )
 
     # Step 10: Docker + deployment files
-    write_file(base / "Dockerfile", f"""
+    write_file(
+        base / "Dockerfile",
+        f"""
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -273,9 +297,12 @@ COPY . .
 RUN python manage.py collectstatic --noinput
 
 CMD ["gunicorn", "{project}.wsgi:application", "--bind", "0.0.0.0:8000"]
-""")
+""",
+    )
 
-    write_file(base / "docker-compose.yml", """
+    write_file(
+        base / "docker-compose.yml",
+        """
 version: "3.9"
 
 services:
@@ -285,20 +312,103 @@ services:
       - "8000:8000"
     env_file:
       - .env
-""")
+""",
+    )
 
-    write_file(base / ".dockerignore", """
+    write_file(
+        base / ".dockerignore",
+        """
 .env
 venv
 __pycache__
 *.pyc
 db.sqlite3
-""")
+""",
+    )
 
     write_file(base / "Procfile", f"web: gunicorn {project}.wsgi")
     write_file(base / "runtime.txt", "python-3.11.6")
+    write_file(
+        base / "LICENSE",
+        f"""
 
-    write_file(base / "README_DEPLOYMENT.md", """
+MIT License
+
+Copyright (c) {year} Conscience Ekhomwandolor (AVT Conscience)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.""",
+    )
+    write_file(
+        base / "README.md",
+        f"""
+
+# {project}
+## This project was bootstrapped using [tap_drf](https://github.com/razielapps/tap_drf) - A production-ready Django REST Framework boilerplate with JWT auth, Swagger docs, Docker support, and more.
+
+**Conscience Ekhomwandolor (AVT Conscience)**  
+- Passionate  fullstack developer & cyber security researcher (red team enthusiast) 
+- Creator of tap_drf, tap_react, tap_fullstack  
+- Personal Blog: [https://medium.com/@avtconscience](https://medium.com/@avtconscience)  
+- GitHub: [https://github.com/razielapps](https://github.com/razielapps)  
+- Email: [avtxconscience@gmail.com](mailto:avtxconscience@gmail.com)
+
+For questions, support, or collaboration, feel free to reach out.
+
+
+""",
+    )
+    write_file(
+        base / ".gitignore",
+        """
+.env
+/*/__pycache__/
+/*/migrations/
+/venv/
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.sqlite3
+db.sqlite3
+.DS_Store
+.idea/
+.vscode/
+*.log
+coverage/
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.egg
+
+""",
+    )
+
+    write_file(
+        base / "README_DEPLOYMENT.md",
+        """
 # Deployment Guide
 
 ## Docker
@@ -317,7 +427,8 @@ git push heroku main
 ## AWS / DigitalOcean / Render
 - Use Dockerfile
 - Set env vars
-""")
+""",
+    )
 
     # Step 11: Migrations + superuser
     run(f"{VENV_PYTHON} manage.py migrate")
@@ -328,6 +439,7 @@ git push heroku main
     print("ReDoc: /redoc/")
     print("Admin: /admin/")
     print("JWT login: /api/auth/token/")
+
 
 if __name__ == "__main__":
     main()
